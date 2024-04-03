@@ -10,6 +10,12 @@ using namespace std;
 #include <WS2tcpip.h>
 
 
+void MyShutDown(SOCKET Socket, ADDRINFO* addrResult)
+{
+    closesocket(Socket);
+    freeaddrinfo(addrResult);
+    WSACleanup();
+}
 
 int main()
 {
@@ -68,8 +74,7 @@ int main()
     if (ConnectSocket == INVALID_SOCKET) 
     {
         cout << "Socket creation failed" << endl;
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ConnectSocket, addrResult);
         return 1;
     }
 
@@ -82,10 +87,8 @@ int main()
     {         
         cout << "Unable to connection to server" << endl;
         // выполняем полную зачистку из-за ошибки
-        closesocket(ConnectSocket);
         ConnectSocket = INVALID_SOCKET;
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ConnectSocket, addrResult);
         return 1;
     }
 
@@ -97,9 +100,7 @@ int main()
     if (result == SOCKET_ERROR)
     {
         cout << "Send failed, error: " << result << endl;
-        closesocket(ConnectSocket);
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ConnectSocket, addrResult);
         return 1;
 
     }
@@ -111,9 +112,7 @@ int main()
     if (result == SOCKET_ERROR)
     {
         cout << "Shutdown error: " << result << endl;
-        closesocket(ConnectSocket);
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ConnectSocket, addrResult);
         return 1;
     }
 
@@ -144,9 +143,8 @@ int main()
 
     } while (result > 0);
 
-    closesocket(ConnectSocket);
-    freeaddrinfo(addrResult);
-    WSACleanup();
+    MyShutDown(ConnectSocket, addrResult);;
+    getchar();
     return 0;
 
 }

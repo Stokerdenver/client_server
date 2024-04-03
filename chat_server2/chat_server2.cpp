@@ -9,7 +9,12 @@ using namespace std;
 #include <winSock2.h>
 #include <WS2tcpip.h>
 
-
+void MyShutDown(SOCKET Socket, ADDRINFO* addrResult)
+{
+    closesocket(Socket);
+    freeaddrinfo(addrResult);
+    WSACleanup();
+}
 
 int main()
 {
@@ -17,7 +22,7 @@ int main()
     ADDRINFO hints;
     ADDRINFO* addrResult = NULL;
 
-    // сокет, который появляется, когда к нам подключается клиент, через него передаем данные
+    // клиентский сокет, который мы порождаем при подключении к нам клиента
     SOCKET ClientSocket = INVALID_SOCKET;
 
     // создаем сокет, слушающий соединение
@@ -25,7 +30,7 @@ int main()
 
     const char* sendBuffer = "Hello from server";
 
-    // буфер приема сообщения от сервера
+    // буфер приема сообщения от клиента
     char recvBuffer[512];
 
     int result;
@@ -51,9 +56,6 @@ int main()
     // хотим получать информацию пассивно
     hints.ai_flags = AI_PASSIVE;
 
-    // сервер не знает адресов клиентов !!!
-
-
 
     // функция ищет параметры, 1 - айпи или имя, 2 - порт, 3 - указатель на структуру аддринфо с параметрами коннекта, 
     result = getaddrinfo(NULL, "666", &hints, &addrResult);
@@ -67,14 +69,13 @@ int main()
 
 
     // а теперь создаем сокет
-    // функция сокет принимает аргументы с семейством протоколок, типом сокета и самим протоколом, всё это указывали выше 
+    // функция сокет принимает аргументы с семейством протоколов, типом сокета и самим протоколом, всё это указывали выше 
     ListenSocket = socket(addrResult->ai_family, addrResult->ai_socktype, addrResult->ai_protocol);
 
     if (ListenSocket == INVALID_SOCKET)
     {
         cout << "Socket creation failed" << endl;
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ListenSocket, addrResult);
         return 1;
     }
 
@@ -87,10 +88,8 @@ int main()
     {
         cout << "Binding socket failed" << endl;
         // выполняем полную зачистку из-за ошибки
-        closesocket(ListenSocket);
         ListenSocket = INVALID_SOCKET;
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ListenSocket, addrResult);
         return 1;
     }
 
@@ -101,9 +100,7 @@ int main()
     if (result == SOCKET_ERROR)
     {
         cout << "Listening failed" << endl;
-        closesocket(ListenSocket);
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ListenSocket, addrResult);
         return 1;
     }
 
@@ -112,22 +109,13 @@ int main()
     if (ClientSocket == SOCKET_ERROR)
     {
         cout << "Accepting failed" << endl;
-        closesocket(ClientSocket);
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ClientSocket, addrResult);
         return 1;
     }
-
 
     // здесь должна быть обработка подключения следующих клиентов
 
     closesocket(ListenSocket);
-
-
-    
-    
-
-
 
     do
     {
@@ -144,9 +132,7 @@ int main()
             if (result == SOCKET_ERROR)
             {
                 cout << "Failed to send data to client" << endl;
-                closesocket(ClientSocket);
-                freeaddrinfo(addrResult);
-                WSACleanup();
+                MyShutDown(ClientSocket, addrResult);
                 return 1;
             }
         }
@@ -159,9 +145,7 @@ int main()
         else
         {
             cout << "recv failed with error: " << endl;
-            closesocket(ClientSocket);
-            freeaddrinfo(addrResult);
-            WSACleanup();
+            MyShutDown(ClientSocket, addrResult);
             return 1;
 
         }
@@ -173,17 +157,14 @@ int main()
     if (result == SOCKET_ERROR)
     {
         cout << "Shutdown client error" << endl;
-        closesocket(ClientSocket);
-        freeaddrinfo(addrResult);
-        WSACleanup();
+        MyShutDown(ClientSocket, addrResult);
         return 1;
     }
 
 
 
-    closesocket(ClientSocket);
-    freeaddrinfo(addrResult);
-    WSACleanup();
+    MyShutDown(ClientSocket, addrResult);
+    getchar();
     return 0;
 
 }
